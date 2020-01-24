@@ -1,6 +1,7 @@
 const listEndpoints = require("express-list-endpoints");
 const express = require("express");
-const mongoose =  require("mongoose");
+const fs = require('fs-extra');
+const mongoose = require("mongoose");
 const bodyParser = require('body-parser');
 const session = require("express-session");
 const profilesRouter = require("./src/routers/profiles/index");
@@ -23,30 +24,34 @@ var passport = require('passport')
     , BasicStrategy = require('passport-http').BasicStrategy;
 
 // function needed to serialize/deserialize the user
-passport.serializeUser(function(user, done) {
+passport.serializeUser(function (user, done) {
     done(null, user._id);
 });
 
-passport.deserializeUser(function(id, done) {
+passport.deserializeUser(function (id, done) {
     User.findOne({_id: id}).then(user => {
         done(undefined, user);
-    }, err => {done(err, null)});
+    }, err => {
+        done(err, null)
+    });
 });
 // setup of passport to use the Basic Authentication and verify the password with one saved on the database
 // using bcrypt to hash the password
 passport.use(new BasicStrategy(
-     function(username, password, done) {
-        User.findOne({ username: username }, async function (err, user) {
+    function (username, password, done) {
+        User.findOne({username: username}, async function (err, user) {
 
-            if (err) { return done(err); }
+            if (err) {
+                return done(err);
+            }
             if (!user) {
-                return done(null, false, { message: 'Incorrect username.' });
+                return done(null, false, {message: 'Incorrect username.'});
             }
             try {
                 const result = await bcrypt.compare(password, user.password);
                 //console.log(result);
                 if (!result) {
-                    return done(null, false, { message: 'Incorrect password.' });
+                    return done(null, false, {message: 'Incorrect password.'});
                 }
                 return done(null, user);
             } catch (e) {
@@ -58,8 +63,8 @@ passport.use(new BasicStrategy(
 ));
 // function chained on the request to verify if the user is loggedin
 // the endpoints with this function chained will be not available to anonymous users
-const isAuthenticated = (req, res, next) => {
-    passport.authenticate('basic', { session: false })(req, res, next)
+export const isAuthenticated = (req, res, next) => {
+    passport.authenticate('basic', {session: false})(req, res, next)
 };
 
 // mongoose.connect("mongodb://localhost:27017/linkedin-db",{useNewUrlParser: true})
@@ -75,9 +80,9 @@ server.use(LoggerMiddleware);
 server.use(cors());
 server.use(express.json());
 // server.use(cookieParser());
-server.use(bodyParser.urlencoded({ extended: false }));
+server.use(bodyParser.urlencoded({extended: false}));
 server.use(bodyParser.json());
-server.use(session({ secret: '98213419263127', cookie: { maxAge: 600000 }, saveUninitialized: true, resave: true }));
+server.use(session({secret: '98213419263127', cookie: {maxAge: 600000}, saveUninitialized: true, resave: true}));
 server.use(passport.initialize());
 server.use(passport.session());
 server.use("/img", express.static('img'));
@@ -89,12 +94,9 @@ server.use("/posts", isAuthenticated, postsRouter);
 // server.use("/comments", isAuthenticated, commentsRouter);
 
 
-
-
-
 server.options("/login");
 // endpoint used on the frontend to login the user and retrieve the user information
-server.post("/login",  passport.authenticate('basic'), function(req, res) {
+server.post("/login", passport.authenticate('basic'), function (req, res) {
     // If this function gets called, authentication was successful.
     // `req.user` contains the authenticated user.
     res.redirect('/profile/' + req.user.username);
@@ -152,10 +154,10 @@ mongoose.connect(process.env.LOCAL, {
     useUnifiedTopology: true
 })
     .then(() => {
-        console.log("MongoDB connected.");
-        server.listen(PORT, () => {
-            console.log("We are running on localhost", PORT)
-        })
-    }
+            console.log("MongoDB connected.");
+            server.listen(PORT, () => {
+                console.log("We are running on localhost", PORT)
+            })
+        }
     )
     .catch(err => console.log(err));
