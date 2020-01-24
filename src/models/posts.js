@@ -11,15 +11,19 @@ const postSchema = new Schema({
     username: {
         type: String,
     },
-    image:{
+    image: {
         type: String,
         //default: 'http://via.placeholder.com/640x360'
     },
     comments: [{
-            type: Schema.Types.ObjectId,
-            ref: "Comment"
+        type: Schema.Types.ObjectId,
+        ref: "Comment"
+    }],
+    likes: [{
+        type: Schema.Types.ObjectId,
+        ref: "user"
     }]
-}, { timestamps: true});
+}, {timestamps: true});
 
 const postsCollection = mongoose.model('Post', postSchema);
 module.exports = postsCollection;

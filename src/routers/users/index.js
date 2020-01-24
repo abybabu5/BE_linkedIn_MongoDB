@@ -1,4 +1,4 @@
-import {isAuthenticated} from "../../../server";
+
 
 const express = require("express");
 const router = express.Router();
@@ -7,7 +7,7 @@ var passport = require('passport');
 const User = require("../../models/users");
 const Profile = require("../../models/profiles");
 
-router.get("/", isAuthenticated, async (req, res) => {
+router.get("/", async (req, res) => {
     try {
         const experience = await User.find({});
         res.status(200).send(experience)
@@ -16,7 +16,7 @@ router.get("/", isAuthenticated, async (req, res) => {
     }
 });
 
-router.get("/:id", isAuthenticated, async (req, res) => {
+router.get("/:id", async (req, res) => {
     try {
         const experience = await User.findOne({_id: req.params.id});
         res.status(200).send(experience)
@@ -51,7 +51,7 @@ router.post("/", async (req, res) => {
     }
 });
 
-router.put("/:id", isAuthenticated, async (req, res) => {
+router.put("/:id", async (req, res) => {
     try {
         delete req.body._id;
         const data = {...req.body};
@@ -69,7 +69,7 @@ router.put("/:id", isAuthenticated, async (req, res) => {
     }
 });
 
-router.delete("/:id", isAuthenticated, async (req, res) => {
+router.delete("/:id", async (req, res) => {
     try {
         const user = await User.findOneAndRemove({_id: req.params.id})
         if (user) res.send("Ok");
@@ -77,6 +77,6 @@ router.delete("/:id", isAuthenticated, async (req, res) => {
     } catch (err) {
         res.send(err)
     }
-})
+});
 
 module.exports = router;

@@ -6,14 +6,21 @@ const path = require("path");
 const fs = require("fs");
 const postsRouter = express.Router();
 
+
 postsRouter.get("/", async (req, res) => {
-    const posts = await Post.find({}).populate({path: "comments", populate: { path: 'postedBy', select: 'username profile', populate: { path: 'profile'}}});
+    const posts = await Post.find({}).populate({
+        path: "comments",
+        populate: {path: 'postedBy', select: 'username profile', populate: {path: 'profile'}}
+    }).populate({path: 'likes', populate: 'profile'});
     res.send(posts);
 });
 
 postsRouter.get("/:postId", async (req, res) => {
     try {
-        const post = await Post.findById(req.params.postId).populate({path: "comments", populate: { path: 'postedBy', select: 'username profile', populate: { path: 'profile'}}});
+        const post = await Post.findById(req.params.postId).populate({
+            path: "comments",
+            populate: {path: 'postedBy', select: 'username profile', populate: {path: 'profile'}}
+        });
         if (post) {
             post.comments[0].populate("postedBy").execPopulate();
             res.send(post);
@@ -118,10 +125,44 @@ postsRouter.put("/:id/comment/:commentId", async (req, res) => {
         res.status(400).send(error);
     }
 });
-postsRouter.delete("/comment/:commentId", async (req, res) => {
+
+postsRouter.get("/:postId/like", async (req, res) => {
+    const post = await Post.findOne({_id: req.params.postId, likes: req.user._id});
+
+    let op = '$push';
+    // console.log(post);
+    if (post !== null) {
+        op = '$pull';
+    }
+    const doc = {};
+    doc[op] = {likes: req.user._id};
+    Post.findOneAndUpdate(
+        {_id: req.params.postId},
+        doc,
+        {new: true, useFindAndModify: false}
+    ).then(post => {
+        console.log(doc);
+        res.send(post);
+    }, error => {
+        console.log(error);
+        res.status(400).send(error);
+    });
+});
+
+postsRouter.delete("/:postId/comment/:commentId", async (req, res) => {
     try {
         const comment = await Comment.findOneAndDelete({_id: req.params.commentId});
-        res.send(comment);
+        const post = Post.findOneAndUpdate(
+            {_id: req.params.postId},
+            {$pull: {comments: req.params.commentId}},
+            {new: true, useFindAndModify: false}
+        ).then(post => {
+            console.log(post);
+            res.send(post);
+        }, error => {
+            console.log(error);
+            res.status(400).send(error);
+        });
     } catch (error) {
         res.status(400).send(error);
     }

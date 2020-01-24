@@ -63,7 +63,7 @@ passport.use(new BasicStrategy(
 ));
 // function chained on the request to verify if the user is loggedin
 // the endpoints with this function chained will be not available to anonymous users
-export const isAuthenticated = (req, res, next) => {
+const isAuthenticated = (req, res, next) => {
     passport.authenticate('basic', {session: false})(req, res, next)
 };
 
