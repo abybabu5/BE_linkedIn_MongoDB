@@ -88,7 +88,7 @@ server.use(passport.session());
 server.use("/img", express.static('img'));
 server.use("/profile", isAuthenticated, profilesRouter);
 server.use("/profile/:username/experiences", isAuthenticated, experienceRouter);
-server.use("/image", express.static('image'));
+// server.use("/app/image", express.static('image'));
 server.use("/users", usersRouter);
 server.use("/posts", isAuthenticated, postsRouter);
 // server.use("/comments", isAuthenticated, commentsRouter);
