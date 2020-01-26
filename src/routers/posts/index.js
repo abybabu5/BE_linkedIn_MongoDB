@@ -113,6 +113,7 @@ postsRouter.post("/:id/comment", async (req, res) => {
         res.status(500).send(error);
     }
 });
+
 postsRouter.put("/:id/comment/:commentId", async (req, res) => {
     try {
         const comment = await Comment.findOneAndUpdate(
