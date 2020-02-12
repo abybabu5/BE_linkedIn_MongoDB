@@ -1,6 +1,7 @@
 const express = require("express");
 const Comment = require("../../models/comment");
 const Post = require("../../models/posts");
+const Profile = require("../../models/profiles");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -8,11 +9,19 @@ const postsRouter = express.Router();
 
 
 postsRouter.get("/", async (req, res) => {
+    const users = await Profile.find();
     const posts = await Post.find({}).populate({
         path: "comments",
         populate: {path: 'postedBy', select: 'username profile', populate: {path: 'profile'}}
     }).populate({path: 'likes', populate: 'profile'});
-    res.send(posts);
+    const rposts =  [...posts];
+
+    rposts.map(post => {
+        post.user = users.find(user => user.username === post.username);
+        return post;
+    });
+    rposts.reverse();
+    res.send(rposts);
 });
 
 postsRouter.get("/:postId", async (req, res) => {
@@ -34,6 +43,7 @@ postsRouter.get("/:postId", async (req, res) => {
 });
 postsRouter.post("/", async (req, res) => {
     try {
+
         const post = {...req.body, username: req.user.username};
         const newPost = await Post.create(post);
         //console.log(req.body);

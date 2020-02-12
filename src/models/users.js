@@ -1,4 +1,4 @@
-const mongoose = require("mongoose") 
+const mongoose = require("mongoose");
 
 const usersSchema = new mongoose.Schema({
     username: { 
@@ -19,6 +19,6 @@ const usersSchema = new mongoose.Schema({
     timestamps: true
 });
 
-const usersCollection = mongoose.model("user", usersSchema)
+const usersCollection = mongoose.model("user", usersSchema);
 
-module.exports = usersCollection
+module.exports = usersCollection;

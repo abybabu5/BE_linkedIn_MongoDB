@@ -11,6 +11,9 @@ const postSchema = new Schema({
     username: {
         type: String,
     },
+    user: {
+        type: Object,
+    },
     image: {
         type: String,
         //default: 'http://via.placeholder.com/640x360'
