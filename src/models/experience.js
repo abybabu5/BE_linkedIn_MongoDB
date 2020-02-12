@@ -33,8 +33,8 @@ const experienceSchema = new mongoose.Schema({
         type: String,
         required: true
     }
-})
+});
 
-const experienceCollection = mongoose.model("experience", experienceSchema)
+const experienceCollection = mongoose.model("experience", experienceSchema);
 
 module.exports = experienceCollection

@@ -1,5 +1,3 @@
-
-
 const express = require("express");
 const router = express.Router();
 const bcrypt = require('bcrypt');
@@ -9,8 +7,8 @@ const Profile = require("../../models/profiles");
 
 router.get("/", async (req, res) => {
     try {
-        const experience = await User.find({});
-        res.status(200).send(experience)
+        const user = await User.find({});
+        res.status(200).send(user)
     } catch (err) {
         res.send(err)
     }
@@ -18,8 +16,8 @@ router.get("/", async (req, res) => {
 
 router.get("/:id", async (req, res) => {
     try {
-        const experience = await User.findOne({_id: req.params.id});
-        res.status(200).send(experience)
+        const user = await User.findOne({_id: req.params.id});
+        res.status(200).send(user)
     } catch (err) {
         res.status(500).send(err)
     }
@@ -35,7 +33,7 @@ router.post("/", async (req, res) => {
             password: hachedPassword
         };
         const user = await User.create(obj);
-        // new need to create a profile for the new user
+        // need to create a profile for the new user
         const profile = await Profile.create({
             email: req.body.email,
             name: req.body.name,

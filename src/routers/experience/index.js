@@ -44,6 +44,7 @@ router.post("/", async(req,res) => {
             updatedAt: new Date()
         };
         const newExperience = await Experience.create(obj);
+
         // const user = await User.updateOne(
         //     { username: req.params.userName },
         //     { $push: { "experience" : newExperience._id } }
@@ -51,10 +52,12 @@ router.post("/", async(req,res) => {
         // user.save()
         newExperience.save();
         res.status(200).send(newExperience)
+        console.log(newExperience);
     } catch(err) {
         res.send(err)
     }
 });
+
 
 const upload = multer({});
 router.post("/:id/picture", upload.single("experience"), async(req,res) => {
