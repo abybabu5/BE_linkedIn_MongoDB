@@ -1,11 +1,13 @@
 const listEndpoints = require("express-list-endpoints");
 const express = require("express");
+const FbStrategy = require("passport-facebook-token");
 const fs = require('fs-extra');
 const LocalStrategy = require("passport-local"); // strategy to verify username and password
 const JwtStrategy = require("passport-jwt").Strategy; // strategy to verify the access token
 const ExtractJwt = require("passport-jwt").ExtractJwt; // this is a helper to extract the info from the token
 const {getToken, jwtOptions} = require("./src/auth");
 const jwt = require("jsonwebtoken");
+const morgan = require('morgan');
 
 const mongoose = require("mongoose");
 const bodyParser = require('body-parser');
@@ -19,6 +21,7 @@ const dotenv = require("dotenv");
 const server = express();
 const cookieParser = require("cookie-parser");
 const User = require("./src/models/users");
+const Profile = require("./src/models/profiles");
 const AccessToken = require("./src/models/accesstoken");
 const cors = require("cors");
 const bcrypt = require('bcrypt');
@@ -26,7 +29,6 @@ const bcrypt = require('bcrypt');
 const PORT = process.env.PORT || 3333;
 
 dotenv.config();
-
 
 
 const passport = require('passport'),
@@ -46,45 +48,83 @@ passport.deserializeUser(function (id, done) {
 });
 
 
-passport.use(new JwtStrategy(jwtOptions, (jwtPayload, callback) =>{ //this strategy will be used when we ask passport to passport.authenticate("jwt")
+passport.use(new JwtStrategy(jwtOptions, (jwtPayload, callback) => { //this strategy will be used when we ask passport to passport.authenticate("jwt")
     User.findById(jwtPayload._id, (err, user) => { //looks into the collection
         if (err) return callback(err, false) // ==> Something went wrong getting the info from the db
         else if (user) return callback(null, user); // ==> Existing user, all right!
         else return callback(null, false) // ==> Non existing user
     })
 }));
-passport.use('authtoken', new AuthTokenStrategy(
-    function (token, done) {
-        console.log(token);
-        AccessToken.findOne({
-            id: token
-        }, function (error, accessToken) {
-            if (error) {
-                return done(error);
-            }
 
-            if (accessToken) {
-                console.log(accessToken);
-
-                User.findOne({
-                    username: accessToken.userId
-                }, function (error, user) {
-                    if (error) {
-                        return done(error);
-                    }
-
-                    if (!user) {
-                        return done(null, false);
-                    }
-
-                    return done(null, user);
-                });
-            } else {
-                return done(null);
-            }
-        });
+passport.use(new FbStrategy({
+    clientID: process.env.FB_ID,
+    clientSecret: process.env.FB_KEY
+}, async (accessToken, refreshToken, facebookProfile, next) => {
+    console.log(facebookProfile._raw);
+    // console.log(accessToken, refreshToken, facebookProfile);
+    try {
+        const userFromFacebookId = await User.findOne({facebookId: facebookProfile.id});//search for a user with a give fbid
+        // console.log(facebookProfile);
+        if (userFromFacebookId) //if we have a user we return the user
+            return next(null, userFromFacebookId);
+        else //we create a user starting from facebook data!
+        {
+            const profile = await Profile.create({
+                name: facebookProfile.name.givenName,
+                surname: facebookProfile.name.familyName,
+                username: facebookProfile.id,
+                email: facebookProfile.id + "@facebook",
+                image: facebookProfile.photos[0].value,
+            });
+            // console.log(profile);
+            const newUser = await User.create({
+                role: "User",
+                profile: profile._id,
+                facebookId: facebookProfile.id,
+                username: facebookProfile.id,
+                refreshToken: refreshToken
+            });
+            return next(null, newUser) // pass on the new user!
+        }
+        //return next(null, userFromFacebookId || false)
+    } catch (exx) {
+        console.log(exx);
+        return next(exx) //report error
     }
-));
+}));
+
+// passport.use('authtoken', new AuthTokenStrategy(
+//     function (token, done) {
+//         console.log(token);
+//         AccessToken.findOne({
+//             id: token
+//         }, function (error, accessToken) {
+//             if (error) {
+//                 return done(error);
+//             }
+//
+//             if (accessToken) {
+//                 console.log(accessToken);
+//
+//                 User.findOne({
+//                     username: accessToken.userId
+//                 }, function (error, user) {
+//                     if (error) {
+//                         return done(error);
+//                     }
+//
+//                     if (!user) {
+//                         return done(null, false);
+//                     }
+//
+//                     return done(null, user);
+//                 });
+//             } else {
+//                 return done(null);
+//             }
+//         });
+//     }
+// ));
 
 // setup of passport to use the Basic Authentication and verify the password with one saved on the database
 // using bcrypt to hash the password
@@ -115,33 +155,35 @@ passport.use('authtoken', new AuthTokenStrategy(
 // function chained on the request to verify if the user is loggedin
 // the endpoints with this function chained will be not available to anonymous users
 const isAuthenticated = (req, res, next) => {
-    passport.authenticate('authtoken', {session: false})(req, res, next)
+    passport.authenticate('facebook-token')(req, res, next)
 };
 
 // mongoose.connect("mongodb://localhost:27017/linkedin-db",{useNewUrlParser: true})
 //   .then(db => console.log("connected to mongodb"), err => console.log("error", err))
 const LoggerMiddleware = (req, res, next) => {
-    console.log(`${req.url} ${req.method} -- ${new Date()}`);
+    console.log(`${req.url} ${req.method} -${req.user}- ${new Date()}`);
     //console.log(req.session);
     next();
 };
 
 
-server.use(LoggerMiddleware);
+
 server.use(cors());
 server.use(express.json());
+server.use(morgan('combined'));
 // server.use(cookieParser());
 server.use(bodyParser.urlencoded({extended: false}));
 server.use(bodyParser.json());
 server.use(session({secret: '98213419263127', cookie: {maxAge: 600000}, saveUninitialized: true, resave: true}));
 server.use(passport.initialize());
 server.use(passport.session());
+
 server.use("/img", express.static('img'));
-server.use("/profile", isAuthenticated, profilesRouter);
-server.use("/profile/:username/experiences", isAuthenticated, experienceRouter);
+server.use("/profile", passport.authenticate('facebook-token'), profilesRouter);
+server.use("/profile/:username/experiences", experienceRouter);
 // server.use("/app/image", express.static('image'));
 server.use("/users", usersRouter);
-server.use("/posts", isAuthenticated, postsRouter);
+server.use("/posts",  passport.authenticate('facebook-token'), postsRouter);
 // server.use("/comments", isAuthenticated, commentsRouter);
 
 
@@ -166,21 +208,13 @@ server.post('/login',
 );
 
 
-server.post("/signin", passport.authenticate(
-    'authtoken',
+server.get("/facebookLogin", passport.authenticate(
+    'facebook-token',
     {
-        session: false,
-        optional: false,
-        headerFields: ['token']
-    },
-    // (...args) => {
-    //     console.log(args);
-    //     return true;
-    // }
-), async(req, res)=>{
-    const token = getToken({ _id: req.user._id });
+        profileFields: ['id', 'displayName', 'name', 'emails', 'birthday', 'gender', 'location']
+    }
+), async (req, res) => {
     res.send({
-        access_token: token,
         user: req.user
     })
 });
