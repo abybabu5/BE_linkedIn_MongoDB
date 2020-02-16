@@ -15,7 +15,6 @@ const session = require("express-session");
 const profilesRouter = require("./src/routers/profiles/index");
 const usersRouter = require("./src/routers/users/index");
 const experienceRouter = require("./src/routers/experience/index");
-// const commentsRouter = require("./src/routers/comments/index");
 const postsRouter = require("./src/routers/posts/index");
 const dotenv = require("dotenv");
 const server = express();
@@ -93,73 +92,10 @@ passport.use(new FbStrategy({
     }
 }));
 
-// passport.use('authtoken', new AuthTokenStrategy(
-//     function (token, done) {
-//         console.log(token);
-//         AccessToken.findOne({
-//             id: token
-//         }, function (error, accessToken) {
-//             if (error) {
-//                 return done(error);
-//             }
-//
-//             if (accessToken) {
-//                 console.log(accessToken);
-//
-//                 User.findOne({
-//                     username: accessToken.userId
-//                 }, function (error, user) {
-//                     if (error) {
-//                         return done(error);
-//                     }
-//
-//                     if (!user) {
-//                         return done(null, false);
-//                     }
-//
-//                     return done(null, user);
-//                 });
-//             } else {
-//                 return done(null);
-//             }
-//         });
-//     }
-// ));
 
-// setup of passport to use the Basic Authentication and verify the password with one saved on the database
-// using bcrypt to hash the password
-// passport.use(new BasicStrategy(
-//     function (username, password, done) {
-//         User.findOne({username: username}, async function (err, user) {
-//
-//             if (err) {
-//                 return done(err);
-//             }
-//             if (!user) {
-//                 return done(null, false, {message: 'Incorrect username.'});
-//             }
-//             try {
-//                 const result = await bcrypt.compare(password, user.password);
-//                 //console.log(result);
-//                 if (!result) {
-//                     return done(null, false, {message: 'Incorrect password.'});
-//                 }
-//                 return done(null, user);
-//             } catch (e) {
-//                 console.log(e);
-//             }
-//
-//         });
-//     }
-// ));
-// function chained on the request to verify if the user is loggedin
-// the endpoints with this function chained will be not available to anonymous users
 const isAuthenticated = (req, res, next) => {
     passport.authenticate('facebook-token')(req, res, next)
 };
-
-// mongoose.connect("mongodb://localhost:27017/linkedin-db",{useNewUrlParser: true})
-//   .then(db => console.log("connected to mongodb"), err => console.log("error", err))
 const LoggerMiddleware = (req, res, next) => {
     console.log(`${req.url} ${req.method} -${req.user}- ${new Date()}`);
     //console.log(req.session);
@@ -171,7 +107,6 @@ const LoggerMiddleware = (req, res, next) => {
 server.use(cors());
 server.use(express.json());
 server.use(morgan('combined'));
-// server.use(cookieParser());
 server.use(bodyParser.urlencoded({extended: false}));
 server.use(bodyParser.json());
 server.use(session({secret: '98213419263127', cookie: {maxAge: 600000}, saveUninitialized: true, resave: true}));
@@ -181,10 +116,8 @@ server.use(passport.session());
 server.use("/img", express.static('img'));
 server.use("/profile", passport.authenticate('facebook-token'), profilesRouter);
 server.use("/profile/:username/experiences", experienceRouter);
-// server.use("/app/image", express.static('image'));
 server.use("/users", usersRouter);
 server.use("/posts",  passport.authenticate('facebook-token'), postsRouter);
-// server.use("/comments", isAuthenticated, commentsRouter);
 
 
 server.options("/login");
@@ -277,7 +210,7 @@ mongoose.connect(process.env.LOCAL, {
             console.log("MongoDB connected.");
 
             server.listen(PORT, () => {
-                console.log("We are running on localhost", PORT)
+                console.log("Server is running on", PORT)
             })
         }
     )
