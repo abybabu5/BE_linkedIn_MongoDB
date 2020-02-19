@@ -3,6 +3,7 @@ const http = require('http').createServer(express);
 const io = require('socket.io')(http);
 const FbStrategy = require("passport-facebook-token");
 const fs = require('fs-extra');
+const BasicStrategy = require("passport-http").BasicStrategy;
 const LocalStrategy = require("passport-local"); // strategy to verify username and password
 const JwtStrategy = require("passport-jwt").Strategy; // strategy to verify the access token
 const ExtractJwt = require("passport-jwt").ExtractJwt; // this is a helper to extract the info from the token
