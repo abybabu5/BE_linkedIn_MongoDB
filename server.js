@@ -1,5 +1,6 @@
-const listEndpoints = require("express-list-endpoints");
 const express = require("express");
+const http = require('http').createServer(express);
+const io = require('socket.io')(http);
 const FbStrategy = require("passport-facebook-token");
 const fs = require('fs-extra');
 const LocalStrategy = require("passport-local"); // strategy to verify username and password
@@ -8,7 +9,7 @@ const ExtractJwt = require("passport-jwt").ExtractJwt; // this is a helper to ex
 const {getToken, jwtOptions} = require("./src/auth");
 const jwt = require("jsonwebtoken");
 const morgan = require('morgan');
-
+const listEndpoints = require("express-list-endpoints");
 const mongoose = require("mongoose");
 const bodyParser = require('body-parser');
 const session = require("express-session");
@@ -45,6 +46,31 @@ passport.deserializeUser(function (id, done) {
         done(err, null)
     });
 });
+
+passport.use(new BasicStrategy(
+    function (username, password, done) {
+        User.findOne({username: username}, async function (err, user) {
+
+            if (err) {
+                return done(err);
+            }
+            if (!user) {
+                return done(null, false, {message: 'Incorrect username.'});
+            }
+            try {
+                const result = await bcrypt.compare(password, user.password);
+                //console.log(result);
+                if (!result) {
+                    return done(null, false, {message: 'Incorrect password.'});
+                }
+                return done(null, user);
+            } catch (e) {
+                console.log(e);
+            }
+
+        });
+    }
+));
 
 
 passport.use(new JwtStrategy(jwtOptions, (jwtPayload, callback) => { //this strategy will be used when we ask passport to passport.authenticate("jwt")
@@ -114,10 +140,10 @@ server.use(passport.initialize());
 server.use(passport.session());
 
 server.use("/img", express.static('img'));
-server.use("/profile", passport.authenticate('facebook-token'), profilesRouter);
+server.use("/profile", passport.authenticate('basic'), profilesRouter);
 server.use("/profile/:username/experiences", experienceRouter);
 server.use("/users", usersRouter);
-server.use("/posts",  passport.authenticate('facebook-token'), postsRouter);
+server.use("/posts",  passport.authenticate('basic'), postsRouter);
 
 
 server.options("/login");
@@ -209,7 +235,7 @@ mongoose.connect(process.env.LOCAL, {
     .then(() => {
             console.log("MongoDB connected.");
 
-            server.listen(PORT, () => {
+            http.listen(PORT, () => {
                 console.log("Server is running on", PORT)
             })
         }
