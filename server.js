@@ -1,4 +1,5 @@
 const listEndpoints = require("express-list-endpoints");
+const FbStrategy = require("passport-facebook-token");
 const express = require("express");
 const fs = require('fs-extra');
 const mongoose = require("mongoose");
@@ -20,8 +21,46 @@ const PORT = process.env.PORT || 3333;
 
 dotenv.config();
 
-var passport = require('passport')
-    , BasicStrategy = require('passport-http').BasicStrategy;
+const passport = require('passport');
+const BasicStrategy = require('passport-http').BasicStrategy;
+
+passport.use(new FbStrategy({
+    clientID: process.env.FB_ID,
+    clientSecret: process.env.FB_KEY
+}, async (accessToken, refreshToken, facebookProfile, next) => {
+    console.log(facebookProfile._raw);
+    // console.log(accessToken, refreshToken, facebookProfile);
+    try {
+        const userFromFacebookId = await User.findOne({facebookId: facebookProfile.id});//search for a user with a give fbid
+        // console.log(facebookProfile);
+        if (userFromFacebookId) //if we have a user we return the user
+            return next(null, userFromFacebookId);
+        else //we create a user starting from facebook data!
+        {
+            const profile = await Profile.create({
+                name: facebookProfile.name.givenName,
+                surname: facebookProfile.name.familyName,
+                username: facebookProfile.id,
+                email: facebookProfile.id + "@facebook",
+                image: facebookProfile.photos[0].value,
+            });
+            // console.log(profile);
+            const newUser = await User.create({
+                role: "User",
+                profile: profile._id,
+                facebookId: facebookProfile.id,
+                username: facebookProfile.id,
+                refreshToken: refreshToken
+            });
+            return next(null, newUser) // pass on the new user!
+        }
+        //return next(null, userFromFacebookId || false)
+    } catch (exx) {
+        console.log(exx);
+        return next(exx) //report error
+    }
+}));
+
 
 // function needed to serialize/deserialize the user
 passport.serializeUser(function (user, done) {
@@ -100,6 +139,17 @@ server.post("/login", passport.authenticate('basic'), function (req, res) {
     // If this function gets called, authentication was successful.
     // `req.user` contains the authenticated user.
     res.redirect('/profile/' + req.user.username);
+});
+
+server.get("/facebookLogin", passport.authenticate(
+    'facebook-token',
+    {
+        profileFields: ['id', 'displayName', 'name', 'emails', 'birthday', 'gender', 'location']
+    }
+), async (req, res) => {
+    res.send({
+        user: req.user
+    })
 });
 
 const requireJSONContentOnlyMiddleware = () => {
