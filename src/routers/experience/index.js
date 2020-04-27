@@ -6,6 +6,7 @@ const multer = require("multer");
 const json2csv = require("json2csv").parse;
 const Experience = require("../../models/experience");
 const User = require("../../models/users");
+var mongoose = require('mongoose');
 
 router.get("/", async(req,res) => {
     try{
@@ -76,15 +77,26 @@ router.post("/:id/picture", upload.single("experience"), async(req,res) => {
 
 router.put("/:id", async(req,res) => {
     try{
+        console.log(req.body);
+        const exp = await Experience.findOne({_id: req.body._id});
+        console.log(exp);
         delete req.body._id;
-        const obj = {
-            ...req.body,
-            userId: req.params.userId,
-            image: "http://trensalon.ru/pic/defaultImage.png",
-            createdAt: new Date(),
-            updatedAt: new Date()
-        };
-        const exp = await Experience.updateOne({_id: req.params.id}, {$set: {obj}});
+        delete req.body.canEdit;
+        Object.keys(req.body).forEach((k) => {
+            exp[k] = req.body[k];
+        })
+        console.log(exp);
+        // const obj = {
+        //     ...req.body,
+        //     // userId: req.params.userId,
+        //     // image: "http://trensalon.ru/pic/defaultImage.png",
+        //     // createdAt: new Date(),
+        //     // updatedAt: new Date()
+        // };
+        // const exp = await Experience.findOneAndUpdate({_id: req.params.id}, {$set: {obj}}, {
+        //     new: true
+        // });
+        await exp.save();
         if(exp) res.status(200).send(exp);
         else res.status(404).send("Not found")
     } catch(err) {
