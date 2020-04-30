@@ -86,16 +86,6 @@ router.put("/:id", async(req,res) => {
             exp[k] = req.body[k];
         })
         console.log(exp);
-        // const obj = {
-        //     ...req.body,
-        //     // userId: req.params.userId,
-        //     // image: "http://trensalon.ru/pic/defaultImage.png",
-        //     // createdAt: new Date(),
-        //     // updatedAt: new Date()
-        // };
-        // const exp = await Experience.findOneAndUpdate({_id: req.params.id}, {$set: {obj}}, {
-        //     new: true
-        // });
         await exp.save();
         if(exp) res.status(200).send(exp);
         else res.status(404).send("Not found")
